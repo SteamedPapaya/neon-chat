@@ -2,24 +2,59 @@ package com.neon.hanasi.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neon.hanasi.model.ChatMessage;
-import com.neon.hanasi.service.ChatService;
-import lombok.RequiredArgsConstructor;
+import com.neon.hanasi.service.MessagePublisher;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * WebSocket 핸들러
+ * 클라이언트와의 WebSocket 연결을 관리합니다.
+ */
 @Slf4j
-@RequiredArgsConstructor
+@Component
 public class ChatHandler extends TextWebSocketHandler {
 
-    private final ChatService chatService;
+    private final Set<WebSocketSession> sessions = ConcurrentHashMap.newKeySet();  // Thread-safe Set
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Set<WebSocketSession> sessions = new CopyOnWriteArraySet<>();  // Thread-safe Set
+
+    @Autowired
+    private MessagePublisher messagePublisher;
+
+    /**
+     * Redis Pub/Sub을 통해 수신된 메시지를 모든 세션에 브로드캐스트합니다.
+     *
+     * @param chatMessage 브로드캐스트할 메시지
+     */
+    public void broadcast(ChatMessage chatMessage) {
+        TextMessage textMessage;
+        try {
+            String messageJson = objectMapper.writeValueAsString(chatMessage);
+            textMessage = new TextMessage(messageJson);
+        } catch (Exception e) {
+            log.error("메시지 JSON 변환 오류: {}", e.getMessage());
+            return;
+        }
+
+        sessions.forEach(sess -> {
+            if (sess.isOpen()) {
+                try {
+                    sess.sendMessage(textMessage);
+                    log.debug("메시지 브로드캐스트: SESSION_ID={}, CONTENT={}", sess.getId(), chatMessage.getContent());
+                } catch (Exception e) {
+                    log.error("메시지 전송 오류: SESSION_ID={}, ERROR={}", sess.getId(), e.getMessage());
+                }
+            } else {
+                log.warn("세션이 열려 있지 않음: SESSION_ID={}", sess.getId());
+            }
+        });
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -33,18 +68,8 @@ public class ChatHandler extends TextWebSocketHandler {
         ChatMessage chatMessage = objectMapper.readValue(message.getPayload(), ChatMessage.class);
         log.info("메시지 수신: MESSAGE_ID={}, CONTENT={}", chatMessage.getMessageId(), chatMessage.getContent());
 
-        // 메시지 처리를 ChatService에 비동기로 위임
-        chatService.broadcastMessage(chatMessage, sessions);
-
-        // 모든 세션에 메시지 브로드캐스트
-        for (WebSocketSession sess : sessions) {
-            try {
-                sess.sendMessage(new TextMessage(objectMapper.writeValueAsString(chatMessage)));
-                log.debug("SESSION={} MESSAGE={}", sess.getId(), chatMessage.getContent());
-            } catch (IllegalStateException e) {
-                log.error("ERROR={}", e.getMessage());
-            }
-        }
+        // 메시지를 Redis Pub/Sub을 통해 발행
+        messagePublisher.publish(chatMessage);
     }
 
     @Override
