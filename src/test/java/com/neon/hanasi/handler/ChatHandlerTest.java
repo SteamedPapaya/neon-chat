@@ -2,11 +2,14 @@ package com.neon.hanasi.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neon.hanasi.model.ChatMessage;
+import com.neon.hanasi.service.ChatService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
@@ -20,7 +23,8 @@ class ChatHandlerTest {
 
     @BeforeEach
     void setUp() {
-        chatHandler = new ChatHandler();
+        ChatService chatService = new ChatService();
+        chatHandler = new ChatHandler(chatService);
         session1 = mock(WebSocketSession.class);
         session2 = mock(WebSocketSession.class);
         objectMapper = new ObjectMapper();
@@ -32,7 +36,7 @@ class ChatHandlerTest {
         chatHandler.afterConnectionEstablished(session1);
         chatHandler.afterConnectionEstablished(session2);
 
-        ChatMessage chatMessage = new ChatMessage("User1", "Hello, World!");
+        ChatMessage chatMessage = new ChatMessage("User1", "Hello, World!", UUID.randomUUID().toString(), System.currentTimeMillis());
         String payload = objectMapper.writeValueAsString(chatMessage);
         TextMessage message = new TextMessage(payload);
 
