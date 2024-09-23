@@ -24,7 +24,7 @@ public class RedisConfig {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
-        // 키와 값의 직렬화 방식 설정
+        // 직렬화 방식 설정: StringRedisSerializer로 키, JSON Serializer로 값 처리
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
@@ -37,8 +37,8 @@ public class RedisConfig {
      * Redis 메시지 리스너 컨테이너 설정
      *
      * @param connectionFactory Redis 연결 팩토리
-     * @param messageSubscriber 메시지 리스너
-     * @param chatChannel       채팅 채널
+     * @param messageSubscriber 메시지 리스너 (MessageSubscriber)
+     * @param chatChannel       채팅 채널 (ChannelTopic)
      * @return RedisMessageListenerContainer 인스턴스
      */
     @Bean
@@ -47,7 +47,10 @@ public class RedisConfig {
                                                                        ChannelTopic chatChannel) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
+
+        // 메시지 리스너 및 채널 등록
         container.addMessageListener(messageSubscriber, chatChannel);
+
         return container;
     }
 

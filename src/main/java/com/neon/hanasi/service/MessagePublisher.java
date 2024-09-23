@@ -1,26 +1,20 @@
 package com.neon.hanasi.service;
 
 import com.neon.hanasi.model.ChatMessage;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.stereotype.Service;
 
 /**
  * 메시지 발행 서비스
- * Redis Pub/Sub을 통해 메시지를 발행합니다.
  */
 @Service
+@RequiredArgsConstructor
 public class MessagePublisher {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final ChannelTopic chatChannel;
-
-    @Autowired
-    public MessagePublisher(RedisTemplate<String, Object> redisTemplate, ChannelTopic chatChannel) {
-        this.redisTemplate = redisTemplate;
-        this.chatChannel = chatChannel;
-    }
 
     /**
      * 채팅 메시지를 Redis Pub/Sub 채널에 발행합니다.
