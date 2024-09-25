@@ -215,6 +215,13 @@ gradle-app.setting
 
 # End of https://www.toptal.com/developers/gitignore/api/gradle,java,intellij+all,macos
 
-### Spring Boot configuration files ###
+### configuration files ###
 application*.yml
 application*.properties
+docker-compose-local.yml
+prometheus-local.yml
+
+### Nginx ###
+
+nginx/**
+
