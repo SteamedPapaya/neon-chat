@@ -218,8 +218,8 @@ gradle-app.setting
 ### configuration files ###
 application*.yml
 application*.properties
-docker-compose-local.yml
-prometheus-local.yml
+docker-compose*.yml
+prometheus*.yml
 
 ### Nginx ###
 
