@@ -33,7 +33,7 @@ public class ChatHandler extends TextWebSocketHandler {
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
             ChatMessage chatMessage = objectMapper.readValue(message.getPayload(), ChatMessage.class);
-            log.info("메시지 수신: MESSAGE_ID={}, CONTENT={}", chatMessage.getMessageId(), chatMessage.getContent());
+            log.info("메시지 수신: MESSAGE_ID={}, CONTENT={}", chatMessage.getMessageId());
 
             // 메시지를 Redis Pub/Sub을 통해 발행
             messagePublisher.publish(chatMessage);
